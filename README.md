@@ -13,9 +13,7 @@
       --text: #e5e7eb;
       --muted: #9ca3af;
       --accent: #3b82f6;
-      --accent2: #ef4444;
       --line: #374151;
-      --ok: #10b981;
     }
 
     * { box-sizing: border-box; }
@@ -195,12 +193,6 @@
       overflow-x: auto;
     }
 
-    .footer-note {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
     @media (max-width: 1100px) {
       .grid {
         grid-template-columns: 1fr;
@@ -298,21 +290,17 @@
           </div>
           <div class="field">
             <label for="nx">Узлы по X</label>
-            <input id="nx" type="number" step="1" value="160">
+            <input id="nx" type="number" step="1" value="180">
           </div>
           <div class="field">
             <label for="ny">Узлы по Y</label>
-            <input id="ny" type="number" step="1" value="90">
+            <input id="ny" type="number" step="1" value="120">
           </div>
         </div>
 
         <div class="btns">
           <button class="primary" onclick="runModel()">Пересчитать</button>
           <button class="secondary" onclick="resetDefaults()">Сбросить</button>
-        </div>
-
-        <div class="footer-note">
-          Для GitHub Pages: создай репозиторий, добавь этот код в файл <strong>index.html</strong> и включи Pages.
         </div>
       </aside>
 
@@ -324,17 +312,17 @@
 
         <div class="card">
           <h2>Электрическое поле</h2>
-          <div id="electricMap" style="height: 520px;"></div>
+          <div id="electricMap" style="height: 560px;"></div>
         </div>
 
         <div class="card">
           <h2>Магнитное поле</h2>
-          <div id="magneticMap" style="height: 520px;"></div>
+          <div id="magneticMap" style="height: 560px;"></div>
         </div>
 
         <div class="card">
           <h2>Профиль распределения на высоте наблюдения</h2>
-          <div id="profiles" style="height: 560px;"></div>
+          <div id="profiles" style="height: 600px;"></div>
         </div>
 
         <div class="card">
@@ -363,8 +351,8 @@
       xMax: 30,
       yMin: 0,
       yMax: 20,
-      nx: 160,
-      ny: 90
+      nx: 180,
+      ny: 120
     };
 
     function getVal(id) {
@@ -393,22 +381,35 @@
       return Math.max(r, minR);
     }
 
+    function niceMax(value) {
+      if (!isFinite(value) || value <= 0) return 1;
+      const exp = Math.floor(Math.log10(value));
+      const base = Math.pow(10, exp);
+      const norm = value / base;
+      let nice;
+      if (norm <= 1) nice = 1;
+      else if (norm <= 2) nice = 2;
+      else if (norm <= 5) nice = 5;
+      else nice = 10;
+      return nice * base;
+    }
+
     function buildWires(params) {
       const { h, d, Uamp, Inom, layout } = params;
 
       if (layout === "vertical") {
         return [
-          { name: "A", x: 0,   y: h + d, V: phasor(Uamp,   0), I: phasor(Inom,   0) },
-          { name: "B", x: 0,   y: h,     V: phasor(Uamp, -120), I: phasor(Inom, -120) },
-          { name: "C", x: 0,   y: h - d, V: phasor(Uamp, 120), I: phasor(Inom, 120) }
+          { name: "A", x: 0,  y: h + d, V: phasor(Uamp,   0), I: phasor(Inom,   0) },
+          { name: "B", x: 0,  y: h,     V: phasor(Uamp, -120), I: phasor(Inom, -120) },
+          { name: "C", x: 0,  y: h - d, V: phasor(Uamp, 120), I: phasor(Inom, 120) }
         ];
       }
 
       if (layout === "triangle") {
         return [
-          { name: "A", x: -d,  y: h,     V: phasor(Uamp,   0), I: phasor(Inom,   0) },
-          { name: "B", x:  d,  y: h,     V: phasor(Uamp, -120), I: phasor(Inom, -120) },
-          { name: "C", x:  0,  y: h + d, V: phasor(Uamp, 120), I: phasor(Inom, 120) }
+          { name: "A", x: -d, y: h,     V: phasor(Uamp,   0), I: phasor(Inom,   0) },
+          { name: "B", x:  d, y: h,     V: phasor(Uamp, -120), I: phasor(Inom, -120) },
+          { name: "C", x:  0, y: h + d, V: phasor(Uamp, 120), I: phasor(Inom, 120) }
         ];
       }
 
@@ -438,8 +439,8 @@
         const dx2 = x - x0;
         const dy2 = y + y0;
 
-        let r1 = clampRadius(Math.hypot(dx1, dy1), rWire);
-        let r2 = clampRadius(Math.hypot(dx2, dy2), rWire);
+        const r1 = clampRadius(Math.hypot(dx1, dy1), rWire);
+        const r2 = clampRadius(Math.hypot(dx2, dy2), rWire);
 
         const Capprox = calcCapacitanceApprox(y0, rWire);
         const tau = cMulReal(wire.V, Capprox);
@@ -452,15 +453,15 @@
         Ex = cAdd(Ex, cMulReal(tau, kE * exFactor));
         Ey = cAdd(Ey, cMulReal(tau, kE * eyFactor));
 
-        let r = clampRadius(Math.hypot(dx1, dy1), rWire);
+        const r = clampRadius(Math.hypot(dx1, dy1), rWire);
         const kB = MU0 / (2 * Math.PI * r * r);
 
         Bx = cAdd(Bx, cMulReal(wire.I, -kB * dy1));
         By = cAdd(By, cMulReal(wire.I,  kB * dx1));
       }
 
-      const Eeff = Math.hypot(cAbs(Ex), cAbs(Ey)) / SQRT2 / 1000; // кВ/м
-      const Beff = Math.hypot(cAbs(Bx), cAbs(By)) / SQRT2 * 1e6;   // мкТл
+      const Eeff = Math.hypot(cAbs(Ex), cAbs(Ey)) / SQRT2 / 1000;
+      const Beff = Math.hypot(cAbs(Bx), cAbs(By)) / SQRT2 * 1e6;
 
       return { Eeff, Beff };
     }
@@ -488,7 +489,7 @@
     }
 
     function calculateProfile(params, wires) {
-      const xObs = linspace(-35, 35, 500);
+      const xObs = linspace(params.xMin, params.xMax, 700);
       const Eobs = [];
       const Bobs = [];
 
@@ -510,17 +511,34 @@
     }
 
     function firstBelow(x, y, threshold) {
+      let best = null;
+      let bestDist = Infinity;
+
       for (let i = 0; i < x.length; i++) {
-        if (x[i] >= 0 && y[i] <= threshold) {
-          return { x: x[i], value: y[i] };
+        if (y[i] <= threshold) {
+          const dist = Math.abs(x[i]);
+          if (dist < bestDist) {
+            best = { x: x[i], value: y[i] };
+            bestDist = dist;
+          }
         }
       }
-      return null;
+      return best;
     }
 
     function fmt(n, d = 2) {
       if (!isFinite(n)) return "—";
       return Number(n).toFixed(d);
+    }
+
+    function arrayMax2D(z) {
+      let m = -Infinity;
+      for (const row of z) {
+        for (const v of row) {
+          if (v > m) m = v;
+        }
+      }
+      return m;
     }
 
     function renderMetrics(data) {
@@ -542,6 +560,12 @@
 
       const lastExtremeX = Math.max(...wires.map(w => w.x));
 
+      const layoutName = {
+        horizontal: "горизонтальное",
+        vertical: "вертикальное",
+        triangle: "треугольное"
+      };
+
       const lines = [];
       lines.push("============================================================");
       lines.push("РЕЗУЛЬТАТЫ МОДЕЛИРОВАНИЯ ЭМП ЛЭП");
@@ -553,20 +577,20 @@
       lines.push(`Полурасстояние между фазами: ${fmt(params.d, 2)} м`);
       lines.push(`Радиус провода: ${fmt(params.rWire, 4)} м`);
       lines.push(`Высота наблюдения: ${fmt(params.obsHeight, 2)} м`);
-      lines.push(`Схема расположения: ${params.layout}`);
+      lines.push(`Схема расположения: ${layoutName[params.layout]}`);
       lines.push("");
       lines.push(`Максимальная напряжённость E: ${fmt(profile.Eobs[idxMaxE], 2)} кВ/м на x = ${fmt(profile.xObs[idxMaxE], 2)} м`);
       lines.push(`Максимальная индукция B: ${fmt(profile.Bobs[idxMaxB], 2)} мкТл на x = ${fmt(profile.xObs[idxMaxB], 2)} м`);
       lines.push("");
 
       if (eBorder) {
-        lines.push(`Граница по E <= 0.5 кВ/м: ${fmt(eBorder.x, 2)} м от центра (${fmt(eBorder.x - lastExtremeX, 2)} м от крайней фазы)`);
+        lines.push(`Граница по E <= 0.5 кВ/м: ${fmt(Math.abs(eBorder.x), 2)} м от центра (${fmt(Math.abs(eBorder.x) - lastExtremeX, 2)} м от крайней фазы)`);
       } else {
         lines.push("Граница по E <= 0.5 кВ/м в расчётном диапазоне не найдена");
       }
 
       if (bBorder) {
-        lines.push(`Граница по B <= 0.5 мкТл: ${fmt(bBorder.x, 2)} м от центра (${fmt(bBorder.x - lastExtremeX, 2)} м от крайней фазы)`);
+        lines.push(`Граница по B <= 0.5 мкТл: ${fmt(Math.abs(bBorder.x), 2)} м от центра (${fmt(Math.abs(bBorder.x) - lastExtremeX, 2)} м от крайней фазы)`);
       } else {
         lines.push("Граница по B <= 0.5 мкТл в расчётном диапазоне не найдена");
       }
@@ -582,15 +606,86 @@
       document.getElementById("report").textContent = lines.join("\n");
     }
 
+    function baseLightLayout(title, params) {
+      return {
+        title: { text: title, font: { size: 18, color: "#1f2937" } },
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#f8fafc",
+        font: { color: "#1f2937" },
+        margin: { l: 70, r: 40, t: 50, b: 65 },
+        xaxis: {
+          title: "Расстояние от центра ЛЭП, м",
+          range: [params.xMin, params.xMax],
+          gridcolor: "#d1d5db",
+          zerolinecolor: "#9ca3af",
+          linecolor: "#6b7280",
+          mirror: true
+        },
+        yaxis: {
+          title: "Высота, м",
+          range: [params.yMin, params.yMax],
+          gridcolor: "#d1d5db",
+          zerolinecolor: "#9ca3af",
+          linecolor: "#6b7280",
+          mirror: true,
+          scaleanchor: "x",
+          scaleratio: 1
+        },
+        legend: {
+          x: 0.72,
+          y: 0.98,
+          bgcolor: "rgba(255,255,255,0.85)",
+          bordercolor: "#d1d5db",
+          borderwidth: 1
+        }
+      };
+    }
+
     function renderElectricMap(grid, wires, params) {
+      const eMax = arrayMax2D(grid.E);
+      const zMax = niceMax(eMax);
+
       const traces = [
         {
           z: grid.E,
           x: grid.xs,
           y: grid.ys,
           type: "heatmap",
-          colorscale: "Reds",
-          colorbar: { title: "E, кВ/м" }
+          zsmooth: "best",
+          zmin: 0,
+          zmax: zMax,
+          colorscale: [
+            [0.00, "#fff7ed"],
+            [0.20, "#fee8d6"],
+            [0.40, "#fdc9a6"],
+            [0.60, "#fb8b6b"],
+            [0.80, "#ef4e3a"],
+            [1.00, "#b30000"]
+          ],
+          colorbar: {
+            title: "E, кВ/м",
+            tickfont: { color: "#1f2937" },
+            titlefont: { color: "#1f2937" }
+          },
+          hovertemplate: "x=%{x:.2f} м<br>y=%{y:.2f} м<br>E=%{z:.2f} кВ/м<extra></extra>"
+        },
+        {
+          z: grid.E,
+          x: grid.xs,
+          y: grid.ys,
+          type: "contour",
+          showscale: false,
+          contours: {
+            coloring: "lines",
+            start: 0,
+            end: zMax,
+            size: zMax / 12
+          },
+          line: {
+            color: "rgba(180, 80, 40, 0.35)",
+            width: 1
+          },
+          hoverinfo: "skip"
         },
         {
           x: wires.map(w => w.x),
@@ -599,44 +694,68 @@
           type: "scatter",
           text: wires.map(w => w.name),
           textposition: "top center",
-          marker: { size: 11, color: "black" },
-          name: "Провода"
+          marker: {
+            size: 12,
+            color: "black",
+            line: { color: "#ffffff", width: 1 }
+          },
+          name: "Провода",
+          hovertemplate: "%{text}<br>x=%{x:.2f} м<br>y=%{y:.2f} м<extra></extra>"
         }
       ];
 
-      const layout = {
-        paper_bgcolor: "rgba(0,0,0,0)",
-        plot_bgcolor: "#0b1220",
-        font: { color: "#e5e7eb" },
-        margin: { l: 60, r: 30, t: 40, b: 55 },
-        xaxis: {
-          title: "Расстояние от центра ЛЭП, м",
-          gridcolor: "#334155",
-          zerolinecolor: "#475569",
-          range: [params.xMin, params.xMax]
-        },
-        yaxis: {
-          title: "Высота, м",
-          gridcolor: "#334155",
-          zerolinecolor: "#475569",
-          range: [params.yMin, params.yMax]
-        },
-        title: "Электрическое поле",
-        showlegend: false
-      };
-
-      Plotly.newPlot("electricMap", traces, layout, { responsive: true, displaylogo: false });
+      const layout = baseLightLayout(`Электрическое поле ЛЭП-${fmt(params.uNom, 0)} кВ`, params);
+      Plotly.react("electricMap", traces, layout, {
+        responsive: true,
+        displaylogo: false
+      });
     }
 
     function renderMagneticMap(grid, wires, params) {
+      const bMax = arrayMax2D(grid.B);
+      const zMax = Math.max(400, niceMax(bMax));
+
       const traces = [
         {
           z: grid.B,
           x: grid.xs,
           y: grid.ys,
           type: "heatmap",
-          colorscale: "Blues",
-          colorbar: { title: "B, мкТл" }
+          zsmooth: "best",
+          zmin: 0,
+          zmax: zMax,
+          colorscale: [
+            [0.00, "#f8fafc"],
+            [0.15, "#dbeafe"],
+            [0.35, "#bfdbfe"],
+            [0.55, "#93c5fd"],
+            [0.75, "#60a5fa"],
+            [1.00, "#0b4ea2"]
+          ],
+          colorbar: {
+            title: "B, мкТл",
+            tickfont: { color: "#1f2937" },
+            titlefont: { color: "#1f2937" }
+          },
+          hovertemplate: "x=%{x:.2f} м<br>y=%{y:.2f} м<br>B=%{z:.2f} мкТл<extra></extra>"
+        },
+        {
+          z: grid.B,
+          x: grid.xs,
+          y: grid.ys,
+          type: "contour",
+          showscale: false,
+          contours: {
+            coloring: "lines",
+            start: 0,
+            end: zMax,
+            size: zMax / 12
+          },
+          line: {
+            color: "rgba(30, 80, 160, 0.28)",
+            width: 1
+          },
+          hoverinfo: "skip"
         },
         {
           x: wires.map(w => w.x),
@@ -645,40 +764,29 @@
           type: "scatter",
           text: wires.map(w => w.name),
           textposition: "top center",
-          marker: { size: 11, color: "black" },
-          name: "Провода"
+          marker: {
+            size: 12,
+            color: "black",
+            line: { color: "#ffffff", width: 1 }
+          },
+          name: "Провода",
+          hovertemplate: "%{text}<br>x=%{x:.2f} м<br>y=%{y:.2f} м<extra></extra>"
         }
       ];
 
-      const layout = {
-        paper_bgcolor: "rgba(0,0,0,0)",
-        plot_bgcolor: "#0b1220",
-        font: { color: "#e5e7eb" },
-        margin: { l: 60, r: 30, t: 40, b: 55 },
-        xaxis: {
-          title: "Расстояние от центра ЛЭП, м",
-          gridcolor: "#334155",
-          zerolinecolor: "#475569",
-          range: [params.xMin, params.xMax]
-        },
-        yaxis: {
-          title: "Высота, м",
-          gridcolor: "#334155",
-          zerolinecolor: "#475569",
-          range: [params.yMin, params.yMax]
-        },
-        title: `Магнитное поле (I = ${fmt(params.iNom, 0)} А)`,
-        showlegend: false
-      };
-
-      Plotly.newPlot("magneticMap", traces, layout, { responsive: true, displaylogo: false });
+      const layout = baseLightLayout(`Магнитное поле ЛЭП-${fmt(params.uNom, 0)} кВ (I=${fmt(params.iNom, 0)} А)`, params);
+      Plotly.react("magneticMap", traces, layout, {
+        responsive: true,
+        displaylogo: false
+      });
     }
 
     function renderProfiles(profile, params) {
-      const eLimitPopulation = new Array(profile.xObs.length).fill(0.5);
-      const eLimitStaff = new Array(profile.xObs.length).fill(5.0);
-      const bLimitPopulation = new Array(profile.xObs.length).fill(0.5);
-      const bLimitStaff = new Array(profile.xObs.length).fill(100);
+      const eMax = Math.max(...profile.Eobs);
+      const bMax = Math.max(...profile.Bobs);
+
+      const eTop = Math.max(5.5, eMax * 1.15);
+      const bTop = Math.max(110, bMax * 1.15);
 
       const traces = [
         {
@@ -686,14 +794,16 @@
           y: profile.Eobs,
           type: "scatter",
           mode: "lines",
+          fill: "tozeroy",
+          fillcolor: "rgba(239,68,68,0.16)",
           name: "E, кВ/м",
-          line: { color: "#ef4444", width: 3 },
+          line: { color: "#dc2626", width: 3 },
           xaxis: "x",
           yaxis: "y"
         },
         {
           x: profile.xObs,
-          y: eLimitPopulation,
+          y: new Array(profile.xObs.length).fill(0.5),
           type: "scatter",
           mode: "lines",
           name: "Норма населения E = 0.5 кВ/м",
@@ -703,11 +813,11 @@
         },
         {
           x: profile.xObs,
-          y: eLimitStaff,
+          y: new Array(profile.xObs.length).fill(5.0),
           type: "scatter",
           mode: "lines",
           name: "Норма персонала E = 5 кВ/м",
-          line: { color: "#dc2626", width: 2, dash: "dot" },
+          line: { color: "#b91c1c", width: 2, dash: "dot" },
           xaxis: "x",
           yaxis: "y"
         },
@@ -716,14 +826,16 @@
           y: profile.Bobs,
           type: "scatter",
           mode: "lines",
+          fill: "tozeroy",
+          fillcolor: "rgba(59,130,246,0.16)",
           name: "B, мкТл",
-          line: { color: "#3b82f6", width: 3 },
+          line: { color: "#2563eb", width: 3 },
           xaxis: "x2",
           yaxis: "y2"
         },
         {
           x: profile.xObs,
-          y: bLimitPopulation,
+          y: new Array(profile.xObs.length).fill(0.5),
           type: "scatter",
           mode: "lines",
           name: "Норма населения B = 0.5 мкТл",
@@ -733,48 +845,94 @@
         },
         {
           x: profile.xObs,
-          y: bLimitStaff,
+          y: new Array(profile.xObs.length).fill(100),
           type: "scatter",
           mode: "lines",
           name: "Норма персонала B = 100 мкТл",
-          line: { color: "#dc2626", width: 2, dash: "dot" },
+          line: { color: "#1d4ed8", width: 2, dash: "dot" },
           xaxis: "x2",
           yaxis: "y2"
         }
       ];
 
       const layout = {
-        paper_bgcolor: "rgba(0,0,0,0)",
-        plot_bgcolor: "#0b1220",
-        font: { color: "#e5e7eb" },
-        grid: { rows: 1, columns: 2, pattern: "independent" },
-        margin: { l: 55, r: 25, t: 40, b: 55 },
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#f8fafc",
+        font: { color: "#1f2937" },
+        margin: { l: 65, r: 35, t: 55, b: 80 },
+
         xaxis: {
+          domain: [0.00, 0.46],
           title: "Расстояние от центра ЛЭП, м",
-          gridcolor: "#334155"
+          gridcolor: "#d1d5db",
+          linecolor: "#6b7280",
+          mirror: true
         },
         yaxis: {
+          domain: [0, 1],
           title: "Напряжённость E, кВ/м",
-          gridcolor: "#334155",
-          rangemode: "tozero"
+          gridcolor: "#d1d5db",
+          linecolor: "#6b7280",
+          mirror: true,
+          range: [0, eTop]
         },
+
         xaxis2: {
+          domain: [0.54, 1.00],
           title: "Расстояние от центра ЛЭП, м",
-          gridcolor: "#334155"
+          gridcolor: "#d1d5db",
+          linecolor: "#6b7280",
+          mirror: true
         },
         yaxis2: {
+          domain: [0, 1],
           title: "Магнитная индукция B, мкТл",
-          gridcolor: "#334155",
-          rangemode: "tozero"
+          gridcolor: "#d1d5db",
+          linecolor: "#6b7280",
+          mirror: true,
+          range: [0, bTop]
         },
-        title: `Профили на высоте ${fmt(params.obsHeight, 2)} м`,
+
+        annotations: [
+          {
+            text: "Электрическое поле",
+            x: 0.23,
+            y: 1.08,
+            xref: "paper",
+            yref: "paper",
+            showarrow: false,
+            font: { size: 16, color: "#1f2937" }
+          },
+          {
+            text: "Магнитное поле",
+            x: 0.77,
+            y: 1.08,
+            xref: "paper",
+            yref: "paper",
+            showarrow: false,
+            font: { size: 16, color: "#1f2937" }
+          }
+        ],
+
+        title: {
+          text: `Профили на высоте ${fmt(params.obsHeight, 2)} м`,
+          font: { size: 18, color: "#1f2937" }
+        },
+
         legend: {
           orientation: "h",
-          y: -0.18
+          y: -0.18,
+          x: 0,
+          bgcolor: "rgba(255,255,255,0.9)",
+          bordercolor: "#d1d5db",
+          borderwidth: 1
         }
       };
 
-      Plotly.newPlot("profiles", traces, layout, { responsive: true, displaylogo: false });
+      Plotly.react("profiles", traces, layout, {
+        responsive: true,
+        displaylogo: false
+      });
     }
 
     function validateParams(params) {
@@ -822,6 +980,7 @@
         h, d, rWire, layout,
         xMin, xMax, yMin, yMax, nx, ny,
         U_nom, U_ph, U_amp,
+        Uamp: U_amp,
         Inom: iNom
       };
     }
@@ -845,8 +1004,8 @@
           { label: "Координата max E", value: `${fmt(profile.xObs[idxMaxE], 2)} м` },
           { label: "Максимум B", value: `${fmt(profile.Bobs[idxMaxB], 2)} мкТл` },
           { label: "Координата max B", value: `${fmt(profile.xObs[idxMaxB], 2)} м` },
-          { label: "Граница по E ≤ 0.5 кВ/м", value: eBorder ? `${fmt(eBorder.x, 2)} м` : "не найдена" },
-          { label: "Граница по B ≤ 0.5 мкТл", value: bBorder ? `${fmt(bBorder.x, 2)} м` : "не найдена" }
+          { label: "Граница по E ≤ 0.5 кВ/м", value: eBorder ? `${fmt(Math.abs(eBorder.x), 2)} м` : "не найдена" },
+          { label: "Граница по B ≤ 0.5 мкТл", value: bBorder ? `${fmt(Math.abs(bBorder.x), 2)} м` : "не найдена" }
         ]);
 
         renderElectricMap(grid, wires, params);
@@ -867,6 +1026,12 @@
       }
       runModel();
     }
+
+    window.addEventListener("resize", () => {
+      if (document.getElementById("electricMap")) Plotly.Plots.resize("electricMap");
+      if (document.getElementById("magneticMap")) Plotly.Plots.resize("magneticMap");
+      if (document.getElementById("profiles")) Plotly.Plots.resize("profiles");
+    });
 
     runModel();
   </script>
